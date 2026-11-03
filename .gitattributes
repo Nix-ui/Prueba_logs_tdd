@@ -1,0 +1,11 @@
+# Archivos generados por la persistencia SQLite (ignorado por Git)
+.tddlab/ -diff
+.tddlab/ linguist-generated=true
+
+# Archivos historicos JSON (ya no se usan; mantidos como referencia de migration)
+script/commit-history.json -diff
+script/tdd_log.json -diff
+
+# Para que GitHub los colapse como archivos generados
+script/commit-history.json linguist-generated=true
+script/tdd_log.json linguist-generated=true
