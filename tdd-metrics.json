@@ -119,6 +119,34 @@
       },
       "tddPhase": "GREEN",
       "tests": []
+    },
+    {
+      "commitId": "30b6252b9942380ffd3bef724ed20063c5375063",
+      "parents": [
+        "b0e1a0a91cd8bbe8f980d379e89fd8a6a3cd95f7"
+      ],
+      "branch": "huascar-test-5",
+      "commitName": "prueba para ver confilctos",
+      "author": {
+        "name": "huascar-riv0126",
+        "email": "huascar.rivero.dev0126@gmail.com"
+      },
+      "commitTimestamp": 1793758640000,
+      "stats": {
+        "filesChanged": 1,
+        "insertions": 7,
+        "deletions": 0
+      },
+      "tddPhase": "GREEN",
+      "tests": [
+        {
+          "numPassedTests": 4,
+          "failedTests": 0,
+          "numTotalTests": 4,
+          "timestamp": 1793758643077,
+          "success": true
+        }
+      ]
     }
   ],
   "bifurcations": [
@@ -127,6 +155,12 @@
       "parentBranch": "main",
       "parentCommitId": "c1f8dff308694a3f9cf7c6a7856fca701993854f",
       "createdAtTimestamp": 1793755613453
+    },
+    {
+      "branchName": "huascar-test-5",
+      "parentBranch": "main",
+      "parentCommitId": "b0e1a0a91cd8bbe8f980d379e89fd8a6a3cd95f7",
+      "createdAtTimestamp": 1793758566591
     }
   ],
   "merges": [
@@ -136,6 +170,13 @@
       "targetBranch": "main",
       "mergedAtCommitId": "c1f8dff308694a3f9cf7c6a7856fca701993854f",
       "timestamp": 1793755881725
+    },
+    {
+      "mergeCommitId": "b0e1a0a91cd8bbe8f980d379e89fd8a6a3cd95f7",
+      "sourceBranch": "unknown",
+      "targetBranch": "main",
+      "mergedAtCommitId": "33f7b3c6bc8895f98bf9445431930c9487fbc321",
+      "timestamp": 1793758545520
     }
   ]
 }
