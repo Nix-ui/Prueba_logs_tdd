@@ -1,0 +1,3 @@
+# Corre los tests para que TddReporter deje el evento en .tdd-events.
+# "|| true" permite commitear en fase RED (tests fallando).
+npx jest || true

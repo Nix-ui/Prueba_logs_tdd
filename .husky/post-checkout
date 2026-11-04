@@ -1,0 +1,2 @@
+# $1 = HEAD anterior, $2 = HEAD nuevo, $3 = 1 si fue cambio de rama
+bun script/tdd-tracker.ts post-checkout "$@"

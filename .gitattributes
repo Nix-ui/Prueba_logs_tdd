@@ -1,0 +1,7 @@
+# Desactivar el diff de estos logs
+script/commit-history.json -diff
+script/tdd_log.json -diff
+
+# Para que GitHub los colapse como archivos generados
+script/commit-history.json linguist-generated=true
+script/tdd_log.json linguist-generated=true

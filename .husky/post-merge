@@ -1,0 +1,13 @@
+#!/bin/sh
+
+if [ "$TDD_RECORDING" = "true" ]; then
+  exit 0
+fi
+
+bun script/tdd-tracker.ts post-merge
+
+if git status --porcelain | grep -q "tdd-metrics.json"; then
+  export TDD_RECORDING=true
+  git add tdd-metrics.json
+  git commit -m "chore(tdd): registro de merge" --no-verify -- tdd-metrics.json
+fi
