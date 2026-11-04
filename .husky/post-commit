@@ -1,14 +1,5 @@
 if [ "$HUSKY_SKIP_TRACK" = "1" ]; then
-	exit 0
+        exit 0
 fi
 
 node ./script/commitScript.js
-
-REPO_DIR="$(git rev-parse --show-toplevel)"
-node "$REPO_DIR/script/commit-tracker.js"
-
-export HUSKY=0
-# Nota: la persistencia historica vive en .tddlab/tddlab.db (ignorado por Git).
-# No se agregan archivos JSON a Git ni se reasienta el commit con --amend:
-# el commit de Git conserva su SHA original.
-unset HUSKY
