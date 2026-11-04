@@ -99,6 +99,26 @@
           "success": true
         }
       ]
+    },
+    {
+      "commitId": "b0e1a0a91cd8bbe8f980d379e89fd8a6a3cd95f7",
+      "parents": [
+        "33f7b3c6bc8895f98bf9445431930c9487fbc321"
+      ],
+      "branch": "main",
+      "commitName": "fix: change bun for npx tsx for husky scripts",
+      "author": {
+        "name": "Matheo Leonardo Quiroga Sanchez",
+        "email": "matheo.quiroga@ucb.edu.bo"
+      },
+      "commitTimestamp": 1793757125000,
+      "stats": {
+        "filesChanged": 3,
+        "insertions": 3,
+        "deletions": 3
+      },
+      "tddPhase": "GREEN",
+      "tests": []
     }
   ],
   "bifurcations": [
