@@ -4,7 +4,7 @@ if [ "$TDD_RECORDING" = "true" ]; then
   exit 0
 fi
 
-bun script/tdd-tracker.ts post-commit
+npx tsx script/tdd-tracker.ts post-commit
 
 if git status --porcelain | grep -q "tdd-metrics.json"; then
   export TDD_RECORDING=true
