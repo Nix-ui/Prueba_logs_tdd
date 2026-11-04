@@ -119,6 +119,26 @@
           "success": true
         }
       ]
+    },
+    {
+      "commitId": "efde9be35eea2e81b40a40a293b34cff26b9aa55",
+      "parents": [
+        "000000000000"
+      ],
+      "branch": "main",
+      "commitName": "init project",
+      "author": {
+        "name": "Matheo Leonardo Quiroga Sanchez",
+        "email": "matheo.quiroga@ucb.edu.bo"
+      },
+      "commitTimestamp": 1793755296000,
+      "stats": {
+        "filesChanged": 33,
+        "insertions": 33401,
+        "deletions": 0
+      },
+      "tddPhase": "GREEN",
+      "tests": []
     }
   ],
   "bifurcations": [
