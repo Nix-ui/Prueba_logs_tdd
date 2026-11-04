@@ -99,6 +99,62 @@
           "success": true
         }
       ]
+    },
+    {
+      "commitId": "43527a5197bc827164b782e115bab450eab3403a",
+      "parents": [
+        "33f7b3c6bc8895f98bf9445431930c9487fbc321"
+      ],
+      "branch": "huascar-test-4",
+      "commitName": "feat: prueba fallando",
+      "author": {
+        "name": "huascar-riv0126",
+        "email": "huascar.rivero.dev0126@gmail.com"
+      },
+      "commitTimestamp": 1793758304000,
+      "stats": {
+        "filesChanged": 1,
+        "insertions": 7,
+        "deletions": 0
+      },
+      "tddPhase": "RED",
+      "tests": [
+        {
+          "numPassedTests": 4,
+          "failedTests": 1,
+          "numTotalTests": 5,
+          "timestamp": 1793757181821,
+          "success": false
+        },
+        {
+          "numPassedTests": 4,
+          "failedTests": 1,
+          "numTotalTests": 5,
+          "timestamp": 1793757353732,
+          "success": false
+        },
+        {
+          "numPassedTests": 5,
+          "failedTests": 0,
+          "numTotalTests": 5,
+          "timestamp": 1793757369388,
+          "success": true
+        },
+        {
+          "numPassedTests": 5,
+          "failedTests": 0,
+          "numTotalTests": 5,
+          "timestamp": 1793757401138,
+          "success": true
+        },
+        {
+          "numPassedTests": 4,
+          "failedTests": 1,
+          "numTotalTests": 5,
+          "timestamp": 1793758307141,
+          "success": false
+        }
+      ]
     }
   ],
   "bifurcations": [
@@ -107,6 +163,24 @@
       "parentBranch": "main",
       "parentCommitId": "c1f8dff308694a3f9cf7c6a7856fca701993854f",
       "createdAtTimestamp": 1793755613453
+    },
+    {
+      "branchName": "huascar-test-3",
+      "parentBranch": "main",
+      "parentCommitId": "33f7b3c6bc8895f98bf9445431930c9487fbc321",
+      "createdAtTimestamp": 1793757552720
+    },
+    {
+      "branchName": "huascar-test-4",
+      "parentBranch": "main",
+      "parentCommitId": "33f7b3c6bc8895f98bf9445431930c9487fbc321",
+      "createdAtTimestamp": 1793757659148
+    },
+    {
+      "branchName": "huascar-test",
+      "parentBranch": "main",
+      "parentCommitId": "33f7b3c6bc8895f98bf9445431930c9487fbc321",
+      "createdAtTimestamp": 1793757095334
     }
   ],
   "merges": [
