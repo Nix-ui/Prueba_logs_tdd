@@ -10,15 +10,20 @@ import {
 
 const COMMAND = 'jest';
 const args = ['--json', '--outputFile=./script/report.json'];
+
 const DB_DIR = '.tddlab';
 const DB_FILE = 'tddlab.db';
 
-function runCommand(command, args) {
+function runCommand(command, commandArgs) {
   return new Promise((resolve, reject) => {
-    const child = spawn(command, args, { stdio: 'inherit' });
+    const child = spawn(command, commandArgs, {
+      stdio: 'inherit'
+    });
+
     child.on('close', (code) => {
       resolve({ code });
     });
+
     child.on('error', (error) => {
       reject(error);
     });
@@ -32,6 +37,7 @@ const readJSONFile = (filePath) => {
 
 async function extractAndAddObject(reportFile, store) {
   const startTime = nowIso();
+
   let childResult;
   let jestError = null;
 
@@ -43,13 +49,18 @@ async function extractAndAddObject(reportFile, store) {
   }
 
   const endTime = nowIso();
-  const exitCode = childResult && typeof childResult.code === 'number'
-    ? childResult.code
-    : 1;
+
+  const exitCode =
+    childResult && typeof childResult.code === 'number'
+      ? childResult.code
+      : 1;
+
   const success = exitCode === 0;
 
-  // Read Jest report if it exists (preserve evidence even on failure).
+  // Read the Jest report if it exists.
+  // This preserves evidence even when tests fail.
   let report = null;
+
   try {
     if (fs.existsSync(reportFile)) {
       report = readJSONFile(reportFile);
@@ -58,10 +69,12 @@ async function extractAndAddObject(reportFile, store) {
     jestError = jestError || readError;
   }
 
-  const durationMs = report && typeof report.endTime === 'number'
-    && typeof report.startTime === 'number'
-    ? report.endTime - report.startTime
-    : null;
+  const durationMs =
+    report &&
+    typeof report.endTime === 'number' &&
+    typeof report.startTime === 'number'
+      ? report.endTime - report.startTime
+      : null;
 
   const testsPassed = report ? report.numPassedTests : 0;
   const testsFailed = report ? report.numFailedTests : 0;
@@ -69,9 +82,10 @@ async function extractAndAddObject(reportFile, store) {
 
   // Capture Git context.
   let gitContext;
+
   try {
     gitContext = captureGitContext();
-  } catch (e) {
+  } catch (error) {
     gitContext = {
       repoRoot: null,
       headSha: null,
@@ -88,13 +102,14 @@ async function extractAndAddObject(reportFile, store) {
   }
 
   const runId = crypto.randomUUID();
+
   let testId = 0;
   let commitId = null;
   let repositoryId = null;
 
   try {
     repositoryId = store.ensureRepository({
-      rootPath: gitContext.repoRoot || __dirname,
+      rootPath: gitContext.repoRoot || process.cwd(),
       remoteUrl: gitContext.remoteUrl
     });
 
@@ -102,20 +117,26 @@ async function extractAndAddObject(reportFile, store) {
       commitId = gitContext.headSha;
     }
 
-    // test_id secuencial por rama + commit (compatibilidad).
-    testId = store.getMaxTestId({
-      branchName: gitContext.branchName,
-      commitId
-    }) + 1;
+    // test_id secuencial por rama + commit.
+    testId =
+      store.getMaxTestId({
+        branchName: gitContext.branchName,
+        commitId
+      }) + 1;
 
     if (commitId) {
       const parents = gitContext.parents || [];
+
       const stats = gitContext.headSha
         ? getCommitStats({
             parentSha: parents[0] || null,
             sha: gitContext.headSha
           })
-        : { additions: 0, deletions: 0, total: 0 };
+        : {
+            additions: 0,
+            deletions: 0,
+            total: 0
+          };
 
       store.upsertCommit({
         commitId: gitContext.headSha,
@@ -130,7 +151,8 @@ async function extractAndAddObject(reportFile, store) {
         parents
       });
 
-      // Registrar rama solo si hay nombre (detached HEAD no tiene rama).
+      // Registrar rama solamente cuando existe un nombre.
+      // Detached HEAD no tiene nombre de rama.
       if (gitContext.branchName) {
         store.upsertBranch({
           repositoryId,
@@ -165,14 +187,18 @@ async function extractAndAddObject(reportFile, store) {
       failureMessage: jestError ? jestError.message : null
     });
 
-    if (report && report.numFailedTests > 0 && report.testResults) {
+    if (
+      report &&
+      report.numFailedTests > 0 &&
+      Array.isArray(report.testResults)
+    ) {
       for (const suite of report.testResults) {
         for (const failure of suite.failureMessages || []) {
           store.insertRunFailure({
             runId,
             testPath: suite.testFilePath || '',
             title: failure,
-            failure: failure
+            failure
           });
         }
       }
@@ -187,7 +213,7 @@ async function extractAndAddObject(reportFile, store) {
       });
     }
   } catch (persistError) {
-    // Persistence failure must NOT be confused with test failure.
+    // Persistence failures must not be confused with test failures.
     try {
       store.insertEventLog({
         level: 'error',
@@ -195,8 +221,8 @@ async function extractAndAddObject(reportFile, store) {
         message: persistError.message,
         runId
       });
-    } catch (e) {
-      // If even event logging fails, tests are still reported by exit code.
+    } catch {
+      // Retain the Jest exit code if event logging also fails.
     }
   }
 
@@ -215,23 +241,52 @@ async function extractAndAddObject(reportFile, store) {
   };
 }
 
-// El flujo de ejecucion se dispara al importar solo cuando NO estamos en un
-// entorno de pruebas (Jest establece NODE_ENV=test). Esto permite importar
-// extractAndAddObject en pruebas sin ejecutar Jest ni salir del proceso.
-if (process.env.NODE_ENV !== 'test') {
-  const reportFile = path.join(process.cwd(), 'script', 'report.json');
+async function main() {
+  const reportFile = path.join(
+    process.cwd(),
+    'script',
+    'report.json'
+  );
+
   const store = new TddStore({
-    dbPath: path.join(process.cwd(), DB_DIR, DB_FILE)
+    dbPath: path.join(
+      process.cwd(),
+      DB_DIR,
+      DB_FILE
+    )
   });
 
-  let result;
   try {
-    result = extractAndAddObject(reportFile, store);
+    const result = await extractAndAddObject(reportFile, store);
+
+    console.log('');
+    console.log('TDD execution result:');
+    console.log(`Passed: ${result.testsPassed}`);
+    console.log(`Failed: ${result.testsFailed}`);
+    console.log(`Total:  ${result.testsTotal}`);
+
+    process.exitCode = result.exitCode === 0 ? 0 : 1;
+  } catch (error) {
+    console.error('Error while executing the TDD test runner:');
+    console.error(error);
+
+    process.exitCode = 1;
   } finally {
     store.close();
   }
-
-  process.exit(result.exitCode === 0 ? 0 : 1);
 }
 
-export { extractAndAddObject, TddStore };
+// Jest sets NODE_ENV=test. Therefore, importing this module from a test
+// does not start another Jest process.
+if (process.env.NODE_ENV !== 'test') {
+  main().catch((error) => {
+    console.error('Unhandled TDD runner error:');
+    console.error(error);
+    process.exitCode = 1;
+  });
+}
+
+export {
+  extractAndAddObject,
+  TddStore
+};
