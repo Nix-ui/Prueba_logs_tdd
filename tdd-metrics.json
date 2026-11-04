@@ -1,0 +1,57 @@
+{
+  "repo": "TDDForma2",
+  "defaultBranch": "main",
+  "commits": [
+    {
+      "commitId": "c1f8dff308694a3f9cf7c6a7856fca701993854f",
+      "parents": [
+        "efde9be35eea2e81b40a40a293b34cff26b9aa55"
+      ],
+      "branch": "main",
+      "commitName": "feat: Multiplicador agregado",
+      "author": {
+        "name": "Matheo Leonardo Quiroga Sanchez",
+        "email": "matheo.quiroga@ucb.edu.bo"
+      },
+      "commitTimestamp": 1793755590000,
+      "stats": {
+        "filesChanged": 3,
+        "insertions": 10,
+        "deletions": 161
+      },
+      "tddPhase": "GREEN",
+      "tests": [
+        {
+          "numPassedTests": 2,
+          "failedTests": 1,
+          "numTotalTests": 3,
+          "timestamp": 1793755491574,
+          "success": false
+        },
+        {
+          "numPassedTests": 3,
+          "failedTests": 0,
+          "numTotalTests": 3,
+          "timestamp": 1793755553076,
+          "success": true
+        },
+        {
+          "numPassedTests": 3,
+          "failedTests": 0,
+          "numTotalTests": 3,
+          "timestamp": 1793755569220,
+          "success": true
+        },
+        {
+          "numPassedTests": 3,
+          "failedTests": 0,
+          "numTotalTests": 3,
+          "timestamp": 1793755594569,
+          "success": true
+        }
+      ]
+    }
+  ],
+  "bifurcations": [],
+  "merges": []
+}
