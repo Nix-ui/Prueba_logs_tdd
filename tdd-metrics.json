@@ -109,5 +109,13 @@
       "createdAtTimestamp": 1793755613453
     }
   ],
-  "merges": []
+  "merges": [
+    {
+      "mergeCommitId": "33f7b3c6bc8895f98bf9445431930c9487fbc321",
+      "sourceBranch": "prueba/uno",
+      "targetBranch": "main",
+      "mergedAtCommitId": "c1f8dff308694a3f9cf7c6a7856fca701993854f",
+      "timestamp": 1793755881725
+    }
+  ]
 }
