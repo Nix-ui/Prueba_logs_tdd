@@ -7,7 +7,4 @@ dist
 report.json
 ./.husky/_
 .husky/.commit-state
-.tddlab/
-*.db
-*.db-wal
-*.db-shm
+
