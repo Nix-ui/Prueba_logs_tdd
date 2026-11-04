@@ -50,8 +50,64 @@
           "success": true
         }
       ]
+    },
+    {
+      "commitId": "33f7b3c6bc8895f98bf9445431930c9487fbc321",
+      "parents": [
+        "c1f8dff308694a3f9cf7c6a7856fca701993854f"
+      ],
+      "branch": "prueba/uno",
+      "commitName": "feat: divisor agregado",
+      "author": {
+        "name": "Matheo Leonardo Quiroga Sanchez",
+        "email": "matheo.quiroga@ucb.edu.bo"
+      },
+      "commitTimestamp": 1793755854000,
+      "stats": {
+        "filesChanged": 2,
+        "insertions": 10,
+        "deletions": 0
+      },
+      "tddPhase": "GREEN",
+      "tests": [
+        {
+          "numPassedTests": 3,
+          "failedTests": 1,
+          "numTotalTests": 4,
+          "timestamp": 1793755781202,
+          "success": false
+        },
+        {
+          "numPassedTests": 4,
+          "failedTests": 0,
+          "numTotalTests": 4,
+          "timestamp": 1793755816501,
+          "success": true
+        },
+        {
+          "numPassedTests": 4,
+          "failedTests": 0,
+          "numTotalTests": 4,
+          "timestamp": 1793755834815,
+          "success": true
+        },
+        {
+          "numPassedTests": 4,
+          "failedTests": 0,
+          "numTotalTests": 4,
+          "timestamp": 1793755858734,
+          "success": true
+        }
+      ]
     }
   ],
-  "bifurcations": [],
+  "bifurcations": [
+    {
+      "branchName": "prueba/uno",
+      "parentBranch": "main",
+      "parentCommitId": "c1f8dff308694a3f9cf7c6a7856fca701993854f",
+      "createdAtTimestamp": 1793755613453
+    }
+  ],
   "merges": []
 }
