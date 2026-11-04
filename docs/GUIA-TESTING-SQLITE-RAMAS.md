@@ -292,7 +292,12 @@ SELECT commit_id, parent_id, ord FROM tdd_commit_parent ORDER BY commit_id, ord;
 # Contar ejecuciones por rama
 SELECT branch_name, COUNT(*) as runs FROM tdd_execution GROUP BY branch_name;
 
-# Identificar registros sin SHA (ejecuciones manuales)
+# Listar todas las ejecuciones, incluidas rama y commit
+SELECT run_id, branch_name, commit_id, success, tests_total, created_at
+FROM tdd_execution
+ORDER BY created_at DESC;
+
+# Identificar ejecuciones sin commit asociado (por ejemplo, fuera de un repositorio Git)
 SELECT run_id, branch_name FROM tdd_execution WHERE commit_id IS NULL;
 
 # Detectar identificadores duplicados
@@ -303,6 +308,18 @@ PRAGMA foreign_key_check;
 ```
 
 Sal de `sqlite3` con `.quit` o `Ctrl+D`.
+
+Nota: es normal que la consulta `WHERE commit_id IS NULL` no devuelva filas
+cuando las ejecuciones se registraron dentro de un repositorio Git con un
+commit disponible. Para ver esas ejecuciones, usa la consulta que lista todas
+las ejecuciones o consulta por rama:
+
+```sql
+SELECT run_id, branch_name, commit_id, success, tests_total, created_at
+FROM tdd_execution
+WHERE branch_name = 'nombre-de-tu-rama'
+ORDER BY created_at DESC;
+```
 
 ---
 

@@ -1,65 +1,65 @@
 {
-  "name": "parcel-jest-base",
-  "version": "1.0.0",
-  "description": "",
-  "default": "index.html",
-  "type": "module",
-  "scripts": {
-    "start": "parcel index.html",
-    "build": "parcel build index.html",
-    "test": "node ./script/tddScript.js",
-    "test:unit": "npx jest script/__tests__/database.test.js script/__tests__/persistence.test.js script/__tests__/integration-sqlite.test.js",
-    "test:integration": "npx jest script/__tests__/integration-sqlite.test.js script/__tests__/branch-support.test.js",
-    "test:e2e": "npx jest script/__tests__/branch-support.test.js",
-    "test:smoke": "npx jest script/__tests__/smoke.test.js",
-    "test:coverage": "npx jest --coverage",
-    "cypress": "cypress open",
-    "cypress-run": "cypress run",
-    "lint": "eslint .",
-    "postinstall": "git init && npx husky",
-    "semantic-commits-on": "node semantic-commits.js enable",
-    "semantic-commits-off": "node semantic-commits.js disabled"
-  },
-  "author": "Israel Antezana R.",
-  "license": "ISC",
-  "devDependencies": {
-    "@babel/core": "^7.25.2",
-    "@babel/preset-env": "^7.25.4",
-    "babel-jest": "^29.7.0",
-    "better-sqlite3": "^11.0.0",
-    "cross-spawn": "^7.0.3",
-    "cypress": "^13.13.3",
-    "eslint": "^9.10.0",
-    "globals": "^17.14.0",
-    "husky": "^9.1.6",
-    "jest": "^29.7.0",
-    "parcel": "^2.12.0"
-  },
-  "dependencies": {
-    "parcel-jest-base": "file:"
-  },
-  "jest": {
-    "testEnvironment": "node",
-    "coverageDirectory": "./coverage",
-    "collectCoverageFrom": [
-      "script/tddStore.js",
-      "script/gitContext.js",
-      "script/tddScript.js",
-      "script/id_execution_tests_commit.js",
-      "script/commitScript.js",
-      "script/commit-tracker.js",
-      "src/sumador.js",
-      "src/presenter.js",
-      "!script/__tests__/**",
-      "!script/VSCodeExtensionPrompt.json"
-    ],
-    "coverageThreshold": {
-      "global": {
-        "statements": 85,
-        "branches": 85,
-        "functions": 85,
-        "lines": 85
-      }
-    }
-  }
+	"name": "parcel-jest-base",
+	"version": "1.0.0",
+	"description": "",
+	"default": "index.html",
+	"type": "module",
+	"scripts": {
+		"start": "parcel index.html",
+		"build": "parcel build index.html",
+		"test": "node ./script/tddScript.js",
+		"test:unit": "npx jest script/__tests__/database.test.js script/__tests__/persistence.test.js script/__tests__/integration-sqlite.test.js",
+		"test:integration": "npx jest script/__tests__/integration-sqlite.test.js script/__tests__/branch-support.test.js",
+		"test:e2e": "npx jest script/__tests__/branch-support.test.js",
+		"test:smoke": "npx jest script/__tests__/smoke.test.js",
+		"test:coverage": "npx jest --coverage",
+		"cypress": "cypress open",
+		"cypress-run": "cypress run",
+		"lint": "eslint .",
+		"postinstall": "git init && npx husky",
+		"semantic-commits-on": "node semantic-commits.js enable",
+		"semantic-commits-off": "node semantic-commits.js disabled"
+	},
+	"author": "Israel Antezana R.",
+	"license": "ISC",
+	"devDependencies": {
+		"@babel/core": "^7.25.2",
+		"@babel/preset-env": "^7.25.4",
+		"babel-jest": "^29.7.0",
+		"better-sqlite3": "^11.0.0",
+		"cross-spawn": "^7.0.3",
+		"cypress": "^13.13.3",
+		"eslint": "^9.10.0",
+		"globals": "^17.14.0",
+		"husky": "^9.1.6",
+		"jest": "^29.7.0",
+		"parcel": "^2.12.0"
+	},
+	"dependencies": {
+		"parcel-jest-base": "file:"
+	},
+	"jest": {
+		"testEnvironment": "node",
+		"coverageDirectory": "./coverage",
+		"collectCoverageFrom": [
+			"script/tddStore.js",
+			"script/gitContext.js",
+			"script/tddScript.js",
+			"script/id_execution_tests_commit.js",
+			"script/commitScript.js",
+			"script/commit-tracker.js",
+			"src/sumador.js",
+			"src/presenter.js",
+			"!script/__tests__/**",
+			"!script/VSCodeExtensionPrompt.json"
+		],
+		"coverageThreshold": {
+			"global": {
+				"statements": 85,
+				"branches": 85,
+				"functions": 85,
+				"lines": 85
+			}
+		}
+	}
 }

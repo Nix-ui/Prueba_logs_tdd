@@ -1,383 +1,339 @@
-import Database from 'better-sqlite3';
-import fs from 'fs';
-import path from 'path';
-import crypto from 'crypto';
+import Database from "better-sqlite3";
+import fs from "fs";
+import path from "path";
 
-const DEFAULT_DB_DIR = '.tddlab';
-const DEFAULT_DB_FILE = 'tddlab.db';
-const SCHEMA_VERSION = 1;
+const DEFAULT_DB_DIR = ".tddlab";
+const DEFAULT_DB_FILE = "tddlab.db";
+const SCHEMA_VERSION = 2;
 
+// Tablas de la versión 1 (schema anterior). Se eliminan al migrar.
+// Orden: hijas primero.
+const LEGACY_TABLES = [
+	"tdd_run_failures",
+	"tdd_event_log",
+	"tdd_commit_parent",
+	"tdd_execution",
+	"tdd_merge",
+	"tdd_commit",
+	"tdd_branch",
+	"tdd_repository",
+	"tdd_schema_migration",
+];
+
+// Notas de diseño:
+// - fork_commit_sha, parent_sha, source_commit_sha y merge_commit_sha NO tienen
+//   FOREIGN KEY a tdd_commit: el commit referenciado puede no haberse registrado
+//   todavía (commits que llegan fuera de orden tras un fetch o merge) y, en el
+//   caso de tdd_branch, evita una referencia circular con tdd_commit.
+// - tdd_commit.branch es la rama donde se HIZO el commit; no se sobrescribe
+//   (tras un fast-forward el commit sigue figurando en su rama de origen).
 const SCHEMA = `
-PRAGMA foreign_keys = ON;
-
-CREATE TABLE IF NOT EXISTS tdd_repository (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  root_path TEXT NOT NULL UNIQUE,
-  remote_url TEXT,
-  created_at TEXT NOT NULL DEFAULT (datetime('now'))
-);
-
 CREATE TABLE IF NOT EXISTS tdd_branch (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  repository_id INTEGER NOT NULL REFERENCES tdd_repository(id) ON DELETE CASCADE,
-  name TEXT NOT NULL,
-  head_sha TEXT,
-  deleted_at TEXT,
-  created_at TEXT NOT NULL DEFAULT (datetime('now')),
-  UNIQUE(repository_id, name)
+  name TEXT PRIMARY KEY,
+  fork_commit_sha TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 CREATE TABLE IF NOT EXISTS tdd_commit (
-  commit_id TEXT PRIMARY KEY,
-  repository_id INTEGER NOT NULL REFERENCES tdd_repository(id) ON DELETE CASCADE,
+  sha TEXT PRIMARY KEY,
+  parent_sha TEXT,
+  branch TEXT REFERENCES tdd_branch(name) ON DELETE SET NULL,
   author TEXT,
   message TEXT,
-  committed_at TEXT,
-  additions INTEGER DEFAULT 0,
-  deletions INTEGER DEFAULT 0,
-  coverage REAL,
-  conclusion TEXT,
-  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  committed_at TEXT
 );
 
-CREATE TABLE IF NOT EXISTS tdd_commit_parent (
-  commit_id TEXT NOT NULL REFERENCES tdd_commit(commit_id) ON DELETE CASCADE,
-  parent_id TEXT NOT NULL REFERENCES tdd_commit(commit_id) ON DELETE CASCADE,
-  ord INTEGER NOT NULL DEFAULT 0,
-  PRIMARY KEY (commit_id, parent_id)
-);
+CREATE INDEX IF NOT EXISTS idx_tdd_commit_branch ON tdd_commit(branch);
 
 CREATE TABLE IF NOT EXISTS tdd_execution (
-  run_id TEXT PRIMARY KEY,
-  test_id INTEGER,
-  repository_id INTEGER NOT NULL REFERENCES tdd_repository(id) ON DELETE CASCADE,
-  commit_id TEXT REFERENCES tdd_commit(commit_id) ON DELETE SET NULL,
-  branch_name TEXT,
-  working_tree_dirty INTEGER DEFAULT 0,
-  trigger TEXT NOT NULL DEFAULT 'manual',
-  start_time TEXT,
-  end_time TEXT,
-  duration_ms INTEGER,
-  success INTEGER NOT NULL DEFAULT 0,
-  tests_passed INTEGER DEFAULT 0,
-  tests_failed INTEGER DEFAULT 0,
-  tests_total INTEGER DEFAULT 0,
-  coverage REAL,
-  exit_code INTEGER,
-  failure_message TEXT,
-  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  commit_sha TEXT REFERENCES tdd_commit(sha) ON DELETE SET NULL,
+  tests_total INTEGER NOT NULL DEFAULT 0,
+  tests_passed INTEGER NOT NULL DEFAULT 0,
+  tests_failed INTEGER NOT NULL DEFAULT 0,
+  executed_at TEXT NOT NULL DEFAULT (datetime('now')),
+  CHECK (tests_passed + tests_failed <= tests_total)
 );
 
-CREATE INDEX IF NOT EXISTS idx_tdd_execution_commit ON tdd_execution(commit_id);
-CREATE INDEX IF NOT EXISTS idx_tdd_execution_branch ON tdd_execution(branch_name);
-CREATE INDEX IF NOT EXISTS idx_tdd_execution_created ON tdd_execution(created_at);
-CREATE INDEX IF NOT EXISTS idx_tdd_execution_run ON tdd_execution(run_id);
+CREATE INDEX IF NOT EXISTS idx_tdd_execution_commit ON tdd_execution(commit_sha);
 
-CREATE TABLE IF NOT EXISTS tdd_run_failures (
-  id TEXT PRIMARY KEY,
-  run_id TEXT NOT NULL REFERENCES tdd_execution(run_id) ON DELETE CASCADE,
-  test_path TEXT NOT NULL,
-  title TEXT NOT NULL,
-  failure TEXT NOT NULL,
-  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+CREATE TABLE IF NOT EXISTS tdd_merge (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  source_branch TEXT NOT NULL REFERENCES tdd_branch(name),
+  target_branch TEXT NOT NULL REFERENCES tdd_branch(name),
+  source_commit_sha TEXT NOT NULL,
+  merge_commit_sha TEXT NOT NULL,
+  is_fast_forward INTEGER NOT NULL DEFAULT 0 CHECK (is_fast_forward IN (0, 1)),
+  merged_at TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE (merge_commit_sha, target_branch)
 );
-
-CREATE INDEX IF NOT EXISTS idx_tdd_run_failures_run ON tdd_run_failures(run_id);
-
-CREATE TABLE IF NOT EXISTS tdd_event_log (
-  id TEXT PRIMARY KEY,
-  event_time TEXT NOT NULL DEFAULT (datetime('now')),
-  level TEXT NOT NULL CHECK(level IN ('info','warn','error')),
-  component TEXT NOT NULL,
-  run_id TEXT REFERENCES tdd_execution(run_id) ON DELETE SET NULL,
-  message TEXT NOT NULL,
-  attributes TEXT
-);
-
-CREATE INDEX IF NOT EXISTS idx_tdd_event_log_run ON tdd_event_log(run_id);
-CREATE INDEX IF NOT EXISTS idx_tdd_event_log_level ON tdd_event_log(level);
 `;
 
-const MIGRATIONS = [
-  {
-    version: 1,
-    up: `
-      CREATE TABLE IF NOT EXISTS tdd_schema_migration (
-        version INTEGER PRIMARY KEY
-      );
-    `
-  }
-];
-
-function generateUuid() {
-  return crypto.randomUUID();
-}
-
 function nowIso() {
-  return new Date().toISOString();
+	return new Date().toISOString();
 }
 
 export class TddStore {
-  constructor({ dbPath } = {}) {
-    const dbDir = dbPath ? path.dirname(dbPath) : DEFAULT_DB_DIR;
-    const dbFile = dbPath || path.join(DEFAULT_DB_DIR, DEFAULT_DB_FILE);
-    this.dbPath = dbFile;
-    this.dbDir = dbDir;
-    this.db = null;
-    this._initialized = false;
-  }
+	constructor({ dbPath } = {}) {
+		const dbDir = dbPath ? path.dirname(dbPath) : DEFAULT_DB_DIR;
+		const dbFile = dbPath || path.join(DEFAULT_DB_DIR, DEFAULT_DB_FILE);
+		this.dbPath = dbFile;
+		this.dbDir = dbDir;
+		this.db = null;
+		this._initialized = false;
+	}
 
-  initialize() {
-    if (this._initialized) {return this.db;}
-    fs.mkdirSync(this.dbDir, { recursive: true });
-    this.db = new Database(this.dbPath);
-    this.db.pragma('foreign_keys = ON');
-    this.db.pragma('journal_mode = WAL');
-    this.db.pragma('busy_timeout = 5000');
-    this._applySchema();
-    this._initialized = true;
-    return this.db;
-  }
+	initialize() {
+		if (this._initialized) {
+			return this.db;
+		}
+		fs.mkdirSync(this.dbDir, { recursive: true });
+		this.db = new Database(this.dbPath);
+		this.db.pragma("foreign_keys = ON");
+		this.db.pragma("journal_mode = WAL");
+		this.db.pragma("busy_timeout = 5000");
+		this._applySchema();
+		this._initialized = true;
+		return this.db;
+	}
 
-  _applySchema() {
-    this.db.exec(SCHEMA);
-    this.db.exec(MIGRATIONS[0].up);
-    const row = this.db.prepare('SELECT MAX(version) AS v FROM tdd_schema_migration').get();
-    const current = row && row.v ? row.v : 0;
-    if (current < SCHEMA_VERSION) {
-      const tx = this.db.transaction(() => {
-        const insert = this.db.prepare('INSERT INTO tdd_schema_migration (version) VALUES (?)');
-        insert.run(SCHEMA_VERSION);
-      });
-      tx();
-    }
-  }
+	_applySchema() {
+		const version = this.db.pragma("user_version", { simple: true });
 
-  close() {
-    if (this.db) {
-      this.db.close();
-      this.db = null;
-      this._initialized = false;
-    }
-  }
+		if (version < SCHEMA_VERSION) {
+			if (this._hasLegacyTables()) {
+				this._backupAndDropLegacy();
+			}
+			this.db.exec(SCHEMA);
+			this.db.pragma(`user_version = ${SCHEMA_VERSION}`);
+			return;
+		}
 
-  ensureRepository({ rootPath, remoteUrl }) {
-    this.initialize();
-    const existing = this.db
-      .prepare('SELECT id FROM tdd_repository WHERE root_path = ?')
-      .get(rootPath);
-    if (existing) {return existing.id;}
-    const insert = this.db.prepare(
-      'INSERT INTO tdd_repository (root_path, remote_url) VALUES (?, ?)'
-    );
-    const result = insert.run(rootPath, remoteUrl || null);
-    return result.lastInsertRowid;
-  }
+		// Ya migrada: CREATE ... IF NOT EXISTS es idempotente.
+		this.db.exec(SCHEMA);
+	}
 
-  upsertBranch({ repositoryId, name, headSha, deletedAt }) {
-    this.initialize();
-    const existing = this.db
-      .prepare('SELECT id FROM tdd_branch WHERE repository_id = ? AND name = ?')
-      .get(repositoryId, name);
-    if (existing) {
-      this.db
-        .prepare(
-          'UPDATE tdd_branch SET head_sha = ?, deleted_at = ? WHERE id = ?'
-        )
-        .run(headSha || null, deletedAt || null, existing.id);
-      return existing.id;
-    }
-    const insert = this.db.prepare(
-      'INSERT INTO tdd_branch (repository_id, name, head_sha, deleted_at) VALUES (?, ?, ?, ?)'
-    );
-    const result = insert.run(repositoryId, name, headSha || null, deletedAt || null);
-    return result.lastInsertRowid;
-  }
+	_hasLegacyTables() {
+		const row = this.db
+			.prepare(
+				`SELECT 1 AS found FROM sqlite_master
+         WHERE type = 'table'
+           AND name IN ('tdd_schema_migration', 'tdd_repository')
+         LIMIT 1`,
+			)
+			.get();
+		return Boolean(row);
+	}
 
-  upsertCommit({
-    commitId,
-    repositoryId,
-    author,
-    message,
-    committedAt,
-    additions,
-    deletions,
-    coverage,
-    conclusion,
-    parents
-  }) {
-    this.initialize();
-    const tx = this.db.transaction(() => {
-      const existing = this.db
-        .prepare('SELECT commit_id FROM tdd_commit WHERE commit_id = ?')
-        .get(commitId);
-      if (existing) {
-        this.db
-          .prepare(
-            `UPDATE tdd_commit SET
-              author = ?, message = ?, committed_at = ?, additions = ?,
-              deletions = ?, coverage = ?, conclusion = ?
-            WHERE commit_id = ?`
-          )
-          .run(
-            author, message, committedAt, additions, deletions,
-            coverage, conclusion, commitId
-          );
-      } else {
-        this.db
-          .prepare(
-            `INSERT INTO tdd_commit
-              (commit_id, repository_id, author, message, committed_at,
-               additions, deletions, coverage, conclusion)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-          )
-          .run(
-            commitId, repositoryId, author, message, committedAt,
-            additions, deletions, coverage, conclusion
-          );
-      }
-      // Replace parents. Solo se insertan padres que ya existen en tdd_commit
-      // (un commit padre puede no haberse registrado aún si los commits
-      // llegan fuera de orden, p. ej. tras un fetch o merge).
-      this.db.prepare('DELETE FROM tdd_commit_parent WHERE commit_id = ?').run(commitId);
-      const insertParent = this.db.prepare(
-        'INSERT INTO tdd_commit_parent (commit_id, parent_id, ord) VALUES (?, ?, ?)'
-      );
-      (parents || []).forEach((parentId, ord) => {
-        const exists = this.db
-          .prepare('SELECT 1 FROM tdd_commit WHERE commit_id = ?')
-          .get(parentId);
-        if (exists) {
-          insertParent.run(commitId, parentId, ord);
-        }
-        // Si el padre no existe aún (commit recibido fuera de orden), se salta silenciosamente
-      });
-    });
-    tx();
-  }
+	_backupAndDropLegacy() {
+		// Copia de seguridad del historial de la v1 antes de borrarlo.
+		if (this.dbPath !== ":memory:") {
+			const backupPath = `${this.dbPath}.v1.bak`;
+			fs.rmSync(backupPath, { force: true });
+			this.db.exec(`VACUUM INTO '${backupPath.replace(/'/g, "''")}'`);
+		}
 
-  insertExecution({
-    runId,
-    testId,
-    repositoryId,
-    commitId,
-    branchName,
-    workingTreeDirty,
-    trigger,
-    startTime,
-    endTime,
-    durationMs,
-    success,
-    testsPassed,
-    testsFailed,
-    testsTotal,
-    coverage,
-    exitCode,
-    failureMessage
-  }) {
-    this.initialize();
-    const insert = this.db.prepare(
-      `INSERT INTO tdd_execution
-        (run_id, test_id, repository_id, commit_id, branch_name,
-         working_tree_dirty, trigger, start_time, end_time, duration_ms,
-         success, tests_passed, tests_failed, tests_total, coverage,
-         exit_code, failure_message)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    );
-    insert.run(
-      runId, testId, repositoryId, commitId, branchName,
-      workingTreeDirty ? 1 : 0, trigger, startTime, endTime, durationMs,
-      success ? 1 : 0, testsPassed, testsFailed, testsTotal,
-      coverage, exitCode, failureMessage
-    );
-    return runId;
-  }
+		this.db.pragma("foreign_keys = OFF");
+		try {
+			for (const table of LEGACY_TABLES) {
+				this.db.exec(`DROP TABLE IF EXISTS ${table}`);
+			}
+		} finally {
+			this.db.pragma("foreign_keys = ON");
+		}
+	}
 
-  insertRunFailure({ runId, testPath, title, failure }) {
-    this.initialize();
-    const id = generateUuid();
-    this.db
-      .prepare(
-        'INSERT INTO tdd_run_failures (id, run_id, test_path, title, failure) VALUES (?, ?, ?, ?, ?)'
-      )
-      .run(id, runId, testPath, title, failure);
-    return id;
-  }
+	close() {
+		if (this.db) {
+			this.db.close();
+			this.db = null;
+			this._initialized = false;
+		}
+	}
 
-  insertEventLog({ level, component, message, runId, attributes }) {
-    this.initialize();
-    const id = generateUuid();
-    this.db
-      .prepare(
-        'INSERT INTO tdd_event_log (id, level, component, message, run_id, attributes) VALUES (?, ?, ?, ?, ?, ?)'
-      )
-      .run(id, level, component, message, runId || null, attributes || null);
-    return id;
-  }
+	// ---------------------------------------------------------------- escritura
 
-  getExecutionsByCommit(commitId) {
-    this.initialize();
-    return this.db
-      .prepare('SELECT * FROM tdd_execution WHERE commit_id = ? ORDER BY created_at DESC')
-      .all(commitId);
-  }
+	// fork_commit_sha solo se fija la primera vez que llega un valor; después
+	// no se sobrescribe (el punto de nacimiento de una rama no cambia).
+	upsertBranch({ name, forkCommitSha }) {
+		this.initialize();
+		this.db
+			.prepare(
+				`INSERT INTO tdd_branch (name, fork_commit_sha)
+         VALUES (?, ?)
+         ON CONFLICT(name) DO UPDATE SET
+           fork_commit_sha = COALESCE(tdd_branch.fork_commit_sha, excluded.fork_commit_sha)`,
+			)
+			.run(name, forkCommitSha || null);
+		return name;
+	}
 
-  getExecutionsByBranch(branchName) {
-    this.initialize();
-    return this.db
-      .prepare('SELECT * FROM tdd_execution WHERE branch_name = ? ORDER BY created_at DESC')
-      .all(branchName);
-  }
+	// La rama debe existir antes (llamar a upsertBranch primero).
+	// branch no se sobrescribe: es la rama donde se hizo el commit.
+	upsertCommit({ sha, parentSha, branch, author, message, committedAt }) {
+		this.initialize();
+		this.db
+			.prepare(
+				`INSERT INTO tdd_commit (sha, parent_sha, branch, author, message, committed_at)
+         VALUES (?, ?, ?, ?, ?, ?)
+         ON CONFLICT(sha) DO UPDATE SET
+           parent_sha   = COALESCE(excluded.parent_sha, tdd_commit.parent_sha),
+           branch       = COALESCE(tdd_commit.branch, excluded.branch),
+           author       = COALESCE(excluded.author, tdd_commit.author),
+           message      = COALESCE(excluded.message, tdd_commit.message),
+           committed_at = COALESCE(excluded.committed_at, tdd_commit.committed_at)`,
+			)
+			.run(
+				sha,
+				parentSha || null,
+				branch || null,
+				author || null,
+				message || null,
+				committedAt || null,
+			);
+		return sha;
+	}
 
-  getExecutionByRunId(runId) {
-    this.initialize();
-    return this.db
-      .prepare('SELECT * FROM tdd_execution WHERE run_id = ?')
-      .get(runId);
-  }
+	insertExecution({
+		commitSha,
+		testsTotal,
+		testsPassed,
+		testsFailed,
+		executedAt,
+	}) {
+		this.initialize();
+		const result = this.db
+			.prepare(
+				`INSERT INTO tdd_execution
+           (commit_sha, tests_total, tests_passed, tests_failed, executed_at)
+         VALUES (?, ?, ?, ?, ?)`,
+			)
+			.run(
+				commitSha || null,
+				testsTotal || 0,
+				testsPassed || 0,
+				testsFailed || 0,
+				executedAt || nowIso(),
+			);
+		return Number(result.lastInsertRowid);
+	}
 
-  getCommitParents(commitId) {
-    this.initialize();
-    return this.db
-      .prepare('SELECT parent_id FROM tdd_commit_parent WHERE commit_id = ? ORDER BY ord')
-      .all(commitId)
-      .map((r) => r.parent_id);
-  }
+	// Para merge normal: sourceCommitSha = HEAD^2, mergeCommitSha = HEAD.
+	// Para fast-forward: sourceCommitSha = mergeCommitSha = HEAD e isFastForward = true.
+	// Es idempotente: (mergeCommitSha, targetBranch) es único.
+	insertMerge({
+		sourceBranch,
+		targetBranch,
+		sourceCommitSha,
+		mergeCommitSha,
+		isFastForward,
+		mergedAt,
+	}) {
+		this.initialize();
+		const tx = this.db.transaction(() => {
+			this.upsertBranch({ name: sourceBranch });
+			this.upsertBranch({ name: targetBranch });
+			return this.db
+				.prepare(
+					`INSERT OR IGNORE INTO tdd_merge
+             (source_branch, target_branch, source_commit_sha,
+              merge_commit_sha, is_fast_forward, merged_at)
+           VALUES (?, ?, ?, ?, ?, ?)`,
+				)
+				.run(
+					sourceBranch,
+					targetBranch,
+					sourceCommitSha,
+					mergeCommitSha,
+					isFastForward ? 1 : 0,
+					mergedAt || nowIso(),
+				);
+		});
+		const result = tx();
+		return result.changes > 0 ? Number(result.lastInsertRowid) : null;
+	}
 
-  getMaxTestId({ branchName, commitId }) {
-    this.initialize();
-    if (branchName && commitId) {
-      const row = this.db
-        .prepare(
-          'SELECT MAX(test_id) AS m FROM tdd_execution WHERE branch_name = ? AND commit_id = ?'
-        )
-        .get(branchName, commitId);
-      return row && row.m !== null ? row.m : 0;
-    }
-    if (branchName) {
-      const row = this.db
-        .prepare('SELECT MAX(test_id) AS m FROM tdd_execution WHERE branch_name = ?')
-        .get(branchName);
-      return row && row.m !== null ? row.m : 0;
-    }
-    const row = this.db
-      .prepare('SELECT MAX(test_id) AS m FROM tdd_execution')
-      .get();
-    return row && row.m !== null ? row.m : 0;
-  }
+	// ----------------------------------------------------------------- lectura
 
-  countExecutions() {
-    this.initialize();
-    const row = this.db.prepare('SELECT COUNT(*) AS c FROM tdd_execution').get();
-    return row ? row.c : 0;
-  }
+	getBranch(name) {
+		this.initialize();
+		return this.db.prepare("SELECT * FROM tdd_branch WHERE name = ?").get(name);
+	}
 
-  countCommits() {
-    this.initialize();
-    const row = this.db.prepare('SELECT COUNT(*) AS c FROM tdd_commit').get();
-    return row ? row.c : 0;
-  }
+	getCommit(sha) {
+		this.initialize();
+		return this.db.prepare("SELECT * FROM tdd_commit WHERE sha = ?").get(sha);
+	}
+
+	// Rama donde se hizo un commit (útil para resolver source_branch en un merge).
+	getCommitBranch(sha) {
+		this.initialize();
+		const row = this.db
+			.prepare("SELECT branch FROM tdd_commit WHERE sha = ?")
+			.get(sha);
+		return row ? row.branch : null;
+	}
+
+	// Rama padre: la rama del commit de donde nació la rama.
+	getParentBranch(name) {
+		this.initialize();
+		const row = this.db
+			.prepare(
+				`SELECT c.branch AS parent_branch
+         FROM tdd_branch b
+         JOIN tdd_commit c ON c.sha = b.fork_commit_sha
+         WHERE b.name = ?`,
+			)
+			.get(name);
+		return row ? row.parent_branch : null;
+	}
+
+	getExecutionsByCommit(sha) {
+		this.initialize();
+		return this.db
+			.prepare(
+				"SELECT * FROM tdd_execution WHERE commit_sha = ? ORDER BY executed_at DESC",
+			)
+			.all(sha);
+	}
+
+	// Ejecuciones de los commits hechos en una rama.
+	getExecutionsByBranch(branchName) {
+		this.initialize();
+		return this.db
+			.prepare(
+				`SELECT e.*
+         FROM tdd_execution e
+         JOIN tdd_commit c ON c.sha = e.commit_sha
+         WHERE c.branch = ?
+         ORDER BY e.executed_at DESC`,
+			)
+			.all(branchName);
+	}
+
+	getMergesByTargetBranch(targetBranch) {
+		this.initialize();
+		return this.db
+			.prepare(
+				"SELECT * FROM tdd_merge WHERE target_branch = ? ORDER BY merged_at DESC",
+			)
+			.all(targetBranch);
+	}
+
+	countExecutions() {
+		this.initialize();
+		const row = this.db
+			.prepare("SELECT COUNT(*) AS c FROM tdd_execution")
+			.get();
+		return row ? row.c : 0;
+	}
+
+	countCommits() {
+		this.initialize();
+		const row = this.db.prepare("SELECT COUNT(*) AS c FROM tdd_commit").get();
+		return row ? row.c : 0;
+	}
 }
 
-export { generateUuid, nowIso, DEFAULT_DB_DIR, DEFAULT_DB_FILE, SCHEMA_VERSION };
+export { nowIso, DEFAULT_DB_DIR, DEFAULT_DB_FILE, SCHEMA_VERSION };
 export default TddStore;
