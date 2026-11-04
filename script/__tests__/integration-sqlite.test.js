@@ -49,8 +49,8 @@ describe('integracion SQLite - BD basada en archivo', () => {
   });
 
   afterEach(() => {
-    if (store1) store1.close();
-    if (store2) store2.close();
+    if (store1) {store1.close();}
+    if (store2) {store2.close();}
   });
 
   it('debe persistir datos entre dos instancias de TddStore (mismo archivo)', () => {
@@ -87,7 +87,7 @@ describe('integracion SQLite - BD basada en archivo', () => {
     store2 = new TddStore({ dbPath });
     store2.initialize();
     const tables = store2.db
-      .prepare("SELECT name FROM sqlite_master WHERE type='table'")
+      .prepare('SELECT name FROM sqlite_master WHERE type=\'table\'')
       .all()
       .map((r) => r.name);
     expect(tables).toContain('tdd_execution');
@@ -112,7 +112,7 @@ describe('integracion SQLite - flujo completo con Git real', () => {
   });
 
   afterEach(() => {
-    if (store) store.close();
+    if (store) {store.close();}
     removeDir(repoDir);
   });
 

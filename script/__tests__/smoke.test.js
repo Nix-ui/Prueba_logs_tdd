@@ -29,7 +29,7 @@ describe('smoke tests - funcionalidad esencial', () => {
     const store = new TddStore({ dbPath: ':memory:' });
     store.initialize();
     const tables = store.db
-      .prepare("SELECT name FROM sqlite_master WHERE type='table'")
+      .prepare('SELECT name FROM sqlite_master WHERE type=\'table\'')
       .all()
       .map((r) => r.name);
     expect(tables).toContain('tdd_execution');

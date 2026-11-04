@@ -31,23 +31,23 @@ function writeStateFile(state) {
 }
 
 function printCommitGuide() {
-  console.log(`\n📝 \x1b[1mGuía para mensajes de commit\x1b[0m\n`);
-  console.log(`✨ \x1b[1mFormato:\x1b[0m`);
-  console.log(`  <tipo>: <descripción>`);
-  console.log(`\n📂 \x1b[1mTipos válidos:\x1b[0m`);
-  console.log(`  - feat: Nueva funcionalidad.`);
-  console.log(`  - fix: Corrección de errores.`);
-  console.log(`  - docs: Cambios en documentación.`);
-  console.log(`  - style: Ajustes estéticos (formato, espaciado, etc.).`);
-  console.log(`  - refactor: Reestructuración del código sin cambiar su funcionalidad.`);
-  console.log(`  - test: Modificaciones relacionadas con pruebas.`);
-  console.log(`  - chore: Tareas de mantenimiento.`);
-  console.log(`  - perf: Optimización de rendimiento.`);
-  console.log(`\n🖋️ \x1b[1mDescripción:\x1b[0m`);
-  console.log(`   Breve explicación del cambio (máximo 150 caracteres).`);
-  console.log(`\n📌 \x1b[1mEjemplos:\x1b[0m`);
-  console.log(`  - feat: agregar validación de usuarios`);
-  console.log(`  - refactor: simplificar la lógica del controlador de usuarios\n`);
+  console.log('\n📝 \x1b[1mGuía para mensajes de commit\x1b[0m\n');
+  console.log('✨ \x1b[1mFormato:\x1b[0m');
+  console.log('  <tipo>: <descripción>');
+  console.log('\n📂 \x1b[1mTipos válidos:\x1b[0m');
+  console.log('  - feat: Nueva funcionalidad.');
+  console.log('  - fix: Corrección de errores.');
+  console.log('  - docs: Cambios en documentación.');
+  console.log('  - style: Ajustes estéticos (formato, espaciado, etc.).');
+  console.log('  - refactor: Reestructuración del código sin cambiar su funcionalidad.');
+  console.log('  - test: Modificaciones relacionadas con pruebas.');
+  console.log('  - chore: Tareas de mantenimiento.');
+  console.log('  - perf: Optimización de rendimiento.');
+  console.log('\n🖋️ \x1b[1mDescripción:\x1b[0m');
+  console.log('   Breve explicación del cambio (máximo 150 caracteres).');
+  console.log('\n📌 \x1b[1mEjemplos:\x1b[0m');
+  console.log('  - feat: agregar validación de usuarios');
+  console.log('  - refactor: simplificar la lógica del controlador de usuarios\n');
 }
 
 function printCommitError() {
@@ -75,7 +75,7 @@ function validateCommitMessage(commitMessagePath) {
 function handleStateChange(state) {
   writeStateFile(state);
   console.log(`🔄 Validación de commits ${state === 'enable' ? 'habilitada' : 'deshabilitada'}.`);
-  if (state === 'enable') printCommitGuide();
+  if (state === 'enable') {printCommitGuide();}
   process.exit(0);
 }
 

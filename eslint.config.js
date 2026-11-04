@@ -1,37 +1,144 @@
+import globals from 'globals';
+
 export default [
+  // Generated files and dependencies must not be linted.
+  {
+    ignores: [
+      'node_modules/**',
+      'dist/**',
+      'coverage/**',
+      '.parcel-cache/**',
+      '.tddlab/**',
+      'script/report.json'
+    ]
+  },
+
+  // Base configuration for every JavaScript file.
   {
     files: ['**/*.js'],
+
     languageOptions: {
       ecmaVersion: 'latest',
-      sourceType: 'module',
-      globals: {
-        require: 'readonly',
-        module: 'readonly',
-        describe: 'readonly',
-        it: 'readonly',
-        cy: 'readonly',
-        expect: 'readonly',
-        document: 'readonly',
-        window: 'readonly',
-      },
+      sourceType: 'module'
     },
+
     rules: {
-      quotes: ['error', 'single'], // comillas simples
-      semi: ['error', 'always'], // ; al final de cada linea
-      'object-curly-spacing': ['error', 'always'], // espacio entre llaves
-      'array-bracket-spacing': ['error', 'never'], // sin espacios dentro de corchetes
-      'no-unused-vars': ['error', { vars: 'all', args: 'after-used', ignoreRestSiblings: true, argsIgnorePattern: '^_' }], // no permite variables sin usar
-      'no-undef': 'error', // no permite el uso de variables no definidas
-      'no-var': 'error', // exige el uso de `let` y `const` en vez de `var`
-      'prefer-const': 'error', // prioriza el uso de `const` cuando es posible
-      'no-shadow': 'error', // no permite variables con el mismo nombre en distintos contextos (shadowing)
-      'consistent-return': 'error', // fuerza consistencia en los valores retornados en una funcion
-      curly: ['error', 'all'], // requiere llaves para todas las declaraciones if/else/for/while
-      eqeqeq: ['error', 'always'], // prioriza el uso de `===` en lugar de `==`
-      'no-console': 'warn', // muestra una advertencia en caso usar `console.log`
-      'no-multi-spaces': 'error', // no permite espacios multiples en una línea
-      'no-trailing-spaces': 'error', // no permite espacios al final de las lineas
-      'no-whitespace-before-property': 'error', // no permite espacios en blanco antes de las propiedades
-    },
+      quotes: [
+        'error',
+        'single',
+        {
+          avoidEscape: true,
+          allowTemplateLiterals: true
+        }
+      ],
+
+      semi: ['error', 'always'],
+      'object-curly-spacing': ['error', 'always'],
+      'array-bracket-spacing': ['error', 'never'],
+
+      'no-unused-vars': [
+        'error',
+        {
+          vars: 'all',
+          args: 'after-used',
+          ignoreRestSiblings: true,
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrors: 'none'
+        }
+      ],
+
+      'no-undef': 'error',
+      'no-var': 'error',
+      'prefer-const': 'error',
+      'no-shadow': 'error',
+      'consistent-return': 'error',
+      curly: ['error', 'all'],
+      eqeqeq: ['error', 'always'],
+      'no-console': 'warn',
+      'no-multi-spaces': 'error',
+      'no-trailing-spaces': 'error',
+      'no-whitespace-before-property': 'error'
+    }
   },
+
+  // Browser source files.
+  {
+    files: [
+      'src/**/*.js'
+    ],
+
+    languageOptions: {
+      globals: {
+        ...globals.browser
+      }
+    }
+  },
+
+  // Node scripts.
+  {
+    files: [
+      'script/**/*.js',
+      'semantic-commits.js',
+      'cypress.config.js'
+    ],
+
+    languageOptions: {
+      globals: {
+        ...globals.node,
+        console: 'readonly',
+        crypto: 'readonly'
+      }
+    },
+
+    rules: {
+      // Console output is valid for command-line scripts.
+      'no-console': 'off'
+    }
+  },
+
+  // Jest test files.
+  {
+    files: [
+      '**/*.test.js',
+      '**/*.spec.js',
+      'script/__tests__/**/*.js'
+    ],
+
+    languageOptions: {
+      globals: {
+        ...globals.node,
+        ...globals.jest,
+        crypto: 'readonly'
+      }
+    },
+
+    rules: {
+      'no-console': 'off'
+    }
+  },
+
+  // Cypress tests and support files.
+  {
+    files: [
+      'cypress/**/*.js',
+      'cypress.config.js'
+    ],
+
+    languageOptions: {
+      globals: {
+        ...globals.browser,
+        ...globals.node,
+        ...globals.mocha,
+        cy: 'readonly',
+        Cypress: 'readonly',
+        assert: 'readonly',
+        expect: 'readonly'
+      }
+    },
+
+    rules: {
+      'no-console': 'off'
+    }
+  }
 ];

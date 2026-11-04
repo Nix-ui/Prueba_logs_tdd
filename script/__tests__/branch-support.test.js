@@ -113,7 +113,7 @@ describe('E2E - dos ramas independientes desde una misma base', () => {
   });
 
   afterEach(() => {
-    if (store) store.close();
+    if (store) {store.close();}
     removeDir(repoDir);
   });
 
@@ -264,7 +264,7 @@ describe('E2E - ejecucion fallida no se confunde con fallo de infraestructura', 
   });
 
   afterEach(() => {
-    if (store) store.close();
+    if (store) {store.close();}
     removeDir(repoDir);
   });
 

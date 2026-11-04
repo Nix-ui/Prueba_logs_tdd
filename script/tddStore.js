@@ -128,7 +128,7 @@ export class TddStore {
   }
 
   initialize() {
-    if (this._initialized) return this.db;
+    if (this._initialized) {return this.db;}
     fs.mkdirSync(this.dbDir, { recursive: true });
     this.db = new Database(this.dbPath);
     this.db.pragma('foreign_keys = ON');
@@ -166,7 +166,7 @@ export class TddStore {
     const existing = this.db
       .prepare('SELECT id FROM tdd_repository WHERE root_path = ?')
       .get(rootPath);
-    if (existing) return existing.id;
+    if (existing) {return existing.id;}
     const insert = this.db.prepare(
       'INSERT INTO tdd_repository (root_path, remote_url) VALUES (?, ?)'
     );

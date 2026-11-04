@@ -42,7 +42,7 @@ describe('tddStore - inicializacion y esquema SQLite', () => {
 
     for (const table of expectedTables) {
       const row = store.db
-        .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name = ?")
+        .prepare('SELECT name FROM sqlite_master WHERE type=\'table\' AND name = ?')
         .get(table);
       expect(row).toBeDefined();
       expect(row.name).toBe(table);
